@@ -63,6 +63,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			})
 
 		switch (d.code) {
+			case 50013:
+				errors.push({
+					path: 'token',
+					message: d.message
+				})
+
+				break
+
 			case 10004:
 				errors.push({
 					path: 'guildID',
