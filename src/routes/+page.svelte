@@ -71,7 +71,7 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <!-- svelte-ignore a11y-missing-attribute -->
-      <small>a bot token with permissions to create events. it can be created <a href="https://discord.com/developers/applications" target="_blank">here</a>. you can also create a bot invitation link by <a on:click={openInviteLink}>clicking here</a></small>
+      <small>a bot token with permissions to create & manage events. it can be created <a href="https://discord.com/developers/applications" target="_blank">here</a>. you can also create a bot invitation link by <a on:click={openInviteLink}>clicking here</a></small>
     </div>
 
     <div class="input-group">
