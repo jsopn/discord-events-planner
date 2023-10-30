@@ -9,7 +9,8 @@ const ajv = new Ajv()
 
 const discordToSchema: { [key: string]: string } = {
 	scheduled_start_time: 'startTime',
-	scheduled_end_time: 'endTime'
+	scheduled_end_time: 'endTime',
+	guild_id: 'guildID'
 }
 
 const getNumberWithOrdinal = (n: number) => {
@@ -28,6 +29,63 @@ const sendError = (errors: Error[]): Response => {
 			status: 400
 		}
 	)
+}
+
+const handleDiscordError = async (resp: Response): Promise<Error[]> => {
+	if (resp.status === 200) {
+		return []
+	} else if (resp.status === 401) {
+		return [
+			{
+				path: 'token',
+				message: 'bot token is invalid'
+			}
+		]
+	}
+
+	const d = await resp.json()
+
+	switch (d.code) {
+		case 50013:
+			return [
+				{
+					path: 'token',
+					message: d.message
+				}
+			]
+
+		case 10004:
+			return [
+				{
+					path: 'guildID',
+					message: d.message
+				}
+			]
+
+		case 50035:
+			return Object.keys(d.errors).map((e) => {
+				if (e === 'entity_metadata')
+					return {
+						path: 'location',
+						message: d.errors.entity_metadata.location._errors[0].message
+					}
+
+				return {
+					path: discordToSchema[e] || e,
+					message: d.errors[e]._errors[0].message
+				}
+			})
+
+		default:
+			console.log(d)
+
+			return [
+				{
+					path: 'token',
+					message: `discord error occured: [${d.code}] ${d.message}`
+				}
+			]
+	}
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -53,50 +111,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const resp = await discord.createEvent(tags, i, data)
-		const d = await resp.json()
-		const errors = []
-
-		if (resp.status === 401)
-			errors.push({
-				path: 'token',
-				message: 'bot token is invalid'
-			})
-
-		switch (d.code) {
-			case 50013:
-				errors.push({
-					path: 'token',
-					message: d.message
-				})
-
-				break
-
-			case 10004:
-				errors.push({
-					path: 'guildID',
-					message: d.message
-				})
-
-				break
-
-			case 50035:
-				errors.push(
-					...Object.keys(d.errors).map((e) => {
-						if (e === 'entity_metadata')
-							return {
-								path: 'location',
-								message: d.errors.entity_metadata.location._errors[0].message
-							}
-
-						return {
-							path: discordToSchema[e] || e,
-							message: d.errors[e]._errors[0].message
-						}
-					})
-				)
-
-				break
-		}
+		const errors = await handleDiscordError(resp)
 
 		if (errors.length > 0) return sendError(errors)
 
